@@ -3,6 +3,7 @@
 // e.g. index.html#edit — drag, shuffle or remove photos, then press Save.
 // Captions are optional: { "file": "photo-01.jpg", "title": "Family session", "place": "Spring 2025" }
 window.PHOTOS = [
+  {"file":"photo-39.jpg"},
   {"file":"photo-01.jpg"},
   {"file":"photo-05.jpg"},
   {"file":"photo-06.jpg"},
