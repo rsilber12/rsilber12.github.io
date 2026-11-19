@@ -5,10 +5,10 @@
 window.PHOTOS = [
   {"file":"photo-01.jpg"},
   {"file":"photo-05.jpg"},
-  {"file":"photo-02.jpg"},
   {"file":"photo-06.jpg"},
   {"file":"photo-07.jpg"},
   {"file":"photo-04.jpg"},
+  {"file":"photo-02.jpg"},
   {"file":"photo-08.jpg"},
   {"file":"photo-13.jpg"},
   {"file":"photo-29.jpg"},
@@ -40,4 +40,9 @@ window.PHOTOS = [
   {"file":"photo-35.jpg"},
   {"file":"photo-37.jpg"},
   {"file":"photo-38.jpg"}
+];
+
+// Photos taken out of the gallery. They can be put back from edit mode.
+window.HIDDEN = [
+
 ];
