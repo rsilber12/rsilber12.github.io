@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ricky Bleich — Outdoor Photography</title>
+<meta name="description" content="Outdoor portrait and family photography by Ricky Bleich.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f4f0;
+    --text: #1a1a1a;
+    --muted: #6b6760;
+    --line: #dedad3;
+    --accent: #8a6d4b;
+    --overlay: rgba(12, 12, 12, 0.95);
+    --serif: "Cormorant Garamond", Georgia, serif;
+    --sans: "Inter", system-ui, sans-serif;
+    --gutter: clamp(16px, 4vw, 48px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121212; --text: #ece9e4; --muted: #9a958d; --line: #2c2a27; --accent: #c7a57e;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121212; --text: #ece9e4; --muted: #9a958d; --line: #2c2a27; --accent: #c7a57e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); font-weight: 300; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  img { display: block; max-width: 100%; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+  header {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 18px var(--gutter);
+    background: var(--bg);
+    border-bottom: 1px solid transparent;
+    transition: border-color .3s;
+  }
+  header.scrolled { border-color: var(--line); }
+  .logo { font-family: var(--serif); font-size: 1.6rem; letter-spacing: .02em; }
+  .header-links { display: flex; gap: 24px; font-size: .75rem; letter-spacing: .18em; text-transform: uppercase; }
+  .header-links a { color: var(--muted); transition: color .2s; }
+  .header-links a:hover { color: var(--text); }
+
+  .intro { padding: clamp(48px, 9vw, 120px) var(--gutter) clamp(36px, 6vw, 72px); max-width: 1100px; }
+  .kicker { font-size: .72rem; letter-spacing: .28em; text-transform: uppercase; color: var(--accent); display: block; margin-bottom: 14px; }
+  h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(3rem, 9vw, 7rem); line-height: .95; }
+  h1 em { font-style: italic; }
+  .intro p { color: var(--muted); max-width: 46ch; margin-top: 22px; font-size: 1.05rem; }
+
+  /* Justified rows: every photo in a row shares one height and keeps its own shape,
+     so vertical and horizontal pictures sit side by side without cropping. */
+  .gallery { --row-h: clamp(220px, 32vw, 420px); display: flex; flex-wrap: wrap; gap: 14px; padding: 0 var(--gutter) clamp(64px, 10vw, 120px); }
+  .gallery::after { content: ""; flex-grow: 999999; } /* keeps the last row from stretching */
+  .shot { --r: 0.8; flex-grow: calc(var(--r) * 100); flex-basis: calc(var(--r) * var(--row-h)); aspect-ratio: var(--r); position: relative; overflow: hidden; cursor: zoom-in; background: var(--line); }
+  .shot img { width: 100%; height: 100%; object-fit: cover; transition: transform .8s cubic-bezier(.2,.7,.2,1), opacity .5s; opacity: 0; }
+  .shot img.loaded { opacity: 1; }
+  .shot:hover img { transform: scale(1.03); }
+  .shot figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 40px 16px 14px; color: #fff; font-size: .82rem; letter-spacing: .04em; background: linear-gradient(transparent, rgba(0,0,0,.55)); opacity: 0; transform: translateY(6px); transition: .35s; }
+  .shot figcaption span { display: block; font-size: .66rem; letter-spacing: .22em; text-transform: uppercase; opacity: .75; }
+  .shot:hover figcaption, .shot:focus-visible figcaption { opacity: 1; transform: none; }
+  .shot:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  footer { padding: 28px var(--gutter); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; font-size: .75rem; color: var(--muted); letter-spacing: .08em; border-top: 1px solid var(--line); }
+  footer a:hover, .theme-toggle:hover { color: var(--text); }
+  .theme-toggle { font-size: .75rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+
+  .lightbox { position: fixed; inset: 0; z-index: 100; background: var(--overlay); display: grid; place-items: center; opacity: 0; pointer-events: none; transition: opacity .3s; }
+  .lightbox.open { opacity: 1; pointer-events: auto; }
+  .lightbox figure { max-width: min(92vw, 1200px); display: flex; flex-direction: column; align-items: center; }
+  .lightbox img { max-width: 100%; max-height: 82vh; object-fit: contain; }
+  .lightbox figcaption { color: #cfcac2; font-size: .8rem; letter-spacing: .1em; margin-top: 14px; text-align: center; }
+  .lb-btn { position: absolute; color: #fff; opacity: .7; font-size: .75rem; letter-spacing: .2em; text-transform: uppercase; padding: 16px; transition: opacity .2s; }
+  .lb-btn:hover { opacity: 1; }
+  .lb-close { top: 12px; right: 12px; }
+  .lb-prev, .lb-next { top: 50%; transform: translateY(-50%); font-size: 1.8rem; }
+  .lb-prev { left: 8px; } .lb-next { right: 8px; }
+  .lb-count { position: absolute; top: 24px; left: 24px; color: #fff; opacity: .6; font-size: .75rem; letter-spacing: .2em; }
+
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity .9s ease, transform .9s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; }
+    .reveal { opacity: 1; transform: none; }
+  }
+
+  @media (max-width: 600px) {
+    .header-links { gap: 16px; }
+    .gallery { gap: 10px; --row-h: 200px; }
+    .shot figcaption { opacity: 1; transform: none; }
+  }
+
+  /* ---------- Edit mode (only when the address ends in #edit) ---------- */
+  .editing .shot { cursor: grab; }
+  .editing .shot:hover img { transform: none; }
+  .editing .shot.dragging { opacity: .3; }
+  .editing .shot.drop-target { outline: 3px solid var(--accent); outline-offset: 3px; }
+  .edit-tools { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; gap: 6px; align-items: center; }
+  .edit-tools .pos, .edit-tools button { height: 34px; min-width: 34px; padding: 0 10px; border-radius: 999px; display: inline-grid; place-items: center; background: rgba(0,0,0,.62); color: #fff; font-size: .85rem; }
+  .edit-tools .pos { margin-right: auto; font-size: .72rem; letter-spacing: .12em; }
+  .edit-tools button:hover { background: rgba(0,0,0,.85); }
+  .edit-tools .rm:hover { background: #b3261e; }
+  .edit-help { margin-top: 18px !important; padding: 12px 16px; border-left: 2px solid var(--accent); color: var(--text) !important; font-size: .92rem !important; }
+  .editing .gallery { padding-bottom: 56px; }
+  .editbar { position: fixed; z-index: 60; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; width: max-content; max-width: calc(100vw - 32px); padding: 8px 8px 8px 18px; border-radius: 28px; background: var(--text); color: var(--bg); box-shadow: 0 10px 30px rgba(0,0,0,.3); font-size: .8rem; letter-spacing: .04em; }
+  .editbar .count { opacity: .65; margin-right: 6px; }
+  .editbar button, .editbar a { padding: 8px 14px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--bg) 35%, transparent); color: var(--bg); }
+  .editbar button:hover:not(:disabled), .editbar a:hover { background: color-mix(in srgb, var(--bg) 15%, transparent); }
+  .editbar .primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .editbar .primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.1); }
+  .editbar button:disabled { opacity: .4; cursor: default; }
+  .edit-status { position: fixed; z-index: 60; left: 50%; bottom: 84px; transform: translate(-50%, 8px); max-width: calc(100vw - 32px); padding: 10px 16px; border-radius: 8px; background: var(--accent); color: #fff; font-size: .85rem; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; }
+  .edit-status.show { opacity: 1; transform: translate(-50%, 0); }
+  @media (max-width: 600px) {
+    .edit-tools { top: 6px; left: 6px; right: 6px; gap: 4px; }
+    .edit-tools .pos { display: none; }
+    .edit-tools button { height: 30px; min-width: 30px; padding: 0 6px; font-size: .78rem; }
+    .edit-tools button[data-act="left"] { margin-left: auto; }
+    .editbar strong { display: none; }
+  }
+  .tray { padding: 0 var(--gutter) 140px; }
+  .tray h2 { font-family: var(--serif); font-weight: 400; font-size: 1.8rem; }
+  .tray p { color: var(--muted); font-size: .9rem; margin: 4px 0 16px; }
+  .tray-list { display: flex; flex-wrap: wrap; gap: 10px; }
+  .tray-list button { position: relative; width: 110px; height: 110px; overflow: hidden; background: var(--line); }
+  .tray-list img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1); opacity: .55; transition: .2s; }
+  .tray-list button:hover img { filter: none; opacity: 1; }
+  .tray-list span { position: absolute; left: 0; right: 0; bottom: 0; padding: 4px; background: rgba(0,0,0,.6); color: #fff; font-size: .7rem; }
+</style>
+</head>
+<body>
+
+<header id="top-bar">
+  <a href="#" class="logo">Ricky Bleich</a>
+  <div class="header-links">
+    <a href="mailto:office@umnot.com">Contact</a>
+  </div>
+</header>
+
+<main>
+  <section class="intro reveal">
+    <span class="kicker">Portfolio</span>
+    <h1>Outdoor Photography</h1>
+    <p>Quiet, honest pictures of people — made in natural light, without hurry.</p>
+  </section>
+
+  <div class="gallery" id="gallery"></div>
+</main>
+
+<footer>
+  <span>© <span id="year"></span> Ricky Bleich · <a href="mailto:office@umnot.com">office@umnot.com</a></span>
+  <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
+</footer>
+
+<div class="lightbox" id="lightbox" aria-hidden="true" role="dialog" aria-label="Image viewer">
+  <span class="lb-count" id="lb-count"></span>
+  <button class="lb-btn lb-close" id="lb-close">Close ✕</button>
+  <button class="lb-btn lb-prev" id="lb-prev" aria-label="Previous">‹</button>
+  <figure><img id="lb-img" alt=""><figcaption id="lb-cap"></figcaption></figure>
+  <button class="lb-btn lb-next" id="lb-next" aria-label="Next">›</button>
+</div>
+
+<!-- The photo list lives in photos.js. Open this page with #edit at the end of the address to rearrange it. -->
+<script src="photos.js"></script>
+<script>
+const ALT = "Outdoor photograph by Ricky Bleich";
+const label = p => [p.title, p.place].filter(Boolean).join(" — ");
+const expand = raw => ({
+  title: "", place: "", ...raw,
+  src:  raw.src  || `images/thumbs/${raw.file}`,
+  full: raw.full || `images/full/${raw.file}`,
+});
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+const editing = location.hash === "#edit";
+let order = (window.PHOTOS || []).slice();   // photos shown, in order
+let removed = [];                            // photos taken out while editing
+let photos = [];
+let dirty = false;
+const undoStack = [];
+
+const gallery = document.getElementById("gallery");
+
+function render() {
+  photos = order.map(expand);
+  gallery.innerHTML = photos.map((p, i) => `
+  <figure class="shot ${editing ? "in" : "reveal"}" data-index="${i}" ${editing ? 'draggable="true"' : 'tabindex="0"'}>
+    <img src="${esc(p.src)}" alt="${esc(label(p) || ALT)}" loading="${i < 6 || editing ? "eager" : "lazy"}" ${editing ? 'draggable="false"' : ""}>
+    ${!editing && label(p) ? `<figcaption>${p.place ? `<span>${esc(p.place)}</span>` : ""}${esc(p.title)}</figcaption>` : ""}
+    ${editing ? `<div class="edit-tools">
+        <span class="pos">${i + 1}</span>
+        <button type="button" data-act="left" aria-label="Move earlier" title="Move earlier">←</button>
+        <button type="button" data-act="right" aria-label="Move later" title="Move later">→</button>
+        <button type="button" data-act="remove" class="rm" aria-label="Remove from gallery" title="Remove">✕</button>
+      </div>` : ""}
+  </figure>`).join("");
+
+  /* Read each photo's real shape once it loads, so the row layout fits it. */
+  gallery.querySelectorAll(".shot img").forEach(img => {
+    const fit = () => {
+      if (img.naturalWidth) img.parentElement.style.setProperty("--r", (img.naturalWidth / img.naturalHeight).toFixed(4));
+      img.classList.add("loaded");
+    };
+    img.complete ? fit() : img.addEventListener("load", fit);
+  });
+  if (editing) renderEditUI();
+}
+
+/* Lightbox (visitors only) */
+const lb = document.getElementById("lightbox"), lbImg = document.getElementById("lb-img"),
+      lbCap = document.getElementById("lb-cap"), lbCount = document.getElementById("lb-count");
+let cur = 0, lastFocus = null;
+function show(i) {
+  cur = (i + photos.length) % photos.length;
+  const p = photos[cur];
+  lbImg.src = p.full; lbImg.alt = label(p) || ALT;
+  lbCap.textContent = label(p);
+  lbCount.textContent = `${cur + 1} / ${photos.length}`;
+}
+function openLb(i) {
+  lastFocus = document.activeElement;
+  show(i);
+  lb.classList.add("open"); lb.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+  document.getElementById("lb-close").focus();
+}
+function closeLb() {
+  lb.classList.remove("open"); lb.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+  lastFocus && lastFocus.focus();
+}
+gallery.addEventListener("click", e => {
+  const s = e.target.closest(".shot"); if (!s) return;
+  if (editing) {
+    const b = e.target.closest("button[data-act]");
+    if (b) act(b.dataset.act, +s.dataset.index);
+    return;
+  }
+  openLb(+s.dataset.index);
+});
+gallery.addEventListener("keydown", e => {
+  if (editing) return;
+  const s = e.target.closest(".shot");
+  if (s && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openLb(+s.dataset.index); }
+});
+document.getElementById("lb-close").onclick = closeLb;
+document.getElementById("lb-prev").onclick = () => show(cur - 1);
+document.getElementById("lb-next").onclick = () => show(cur + 1);
+lb.addEventListener("click", e => { if (e.target === lb) closeLb(); });
+document.addEventListener("keydown", e => {
+  if (!lb.classList.contains("open")) return;
+  if (e.key === "Escape") closeLb();
+  if (e.key === "ArrowLeft") show(cur - 1);
+  if (e.key === "ArrowRight") show(cur + 1);
+});
+let touchX = null;
+lb.addEventListener("touchstart", e => touchX = e.touches[0].clientX, { passive: true });
+lb.addEventListener("touchend", e => {
+  if (touchX === null) return;
+  const dx = e.changedTouches[0].clientX - touchX;
+  if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1));
+  touchX = null;
+});
+
+/* ===================== Edit mode (index.html#edit) ===================== */
+let bar, countEl, undoBtn, saveBtn, statusEl, tray, trayList, fileHandle = null;
+
+function snapshot() { undoStack.push({ order: order.slice(), removed: removed.slice() }); if (undoStack.length > 100) undoStack.shift(); }
+function changed() { dirty = true; render(); }
+function act(a, i) {
+  snapshot();
+  if (a === "remove") {
+    removed.push(order.splice(i, 1)[0]);
+  } else {
+    const j = a === "left" ? i - 1 : i + 1;
+    if (j < 0 || j >= order.length) { undoStack.pop(); return; }
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  changed();
+}
+function shuffle() {
+  snapshot();
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  changed();
+  say("Shuffled. Press Undo to go back.");
+}
+function undo() {
+  const prev = undoStack.pop(); if (!prev) return;
+  order = prev.order; removed = prev.removed;
+  changed();
+}
+function restore(i) {
+  snapshot();
+  order.push(removed.splice(i, 1)[0]);
+  changed();
+  say("Put back at the end of the gallery.");
+}
+let sayTimer;
+function say(msg, sticky) {
+  statusEl.textContent = msg; statusEl.classList.add("show");
+  clearTimeout(sayTimer);
+  if (!sticky) sayTimer = setTimeout(() => statusEl.classList.remove("show"), 3500);
+}
+
+function photosFileText() {
+  const keep = p => {
+    const o = {};
+    for (const k of ["file", "src", "full", "title", "place"]) if (p[k]) o[k] = p[k];
+    return o;
+  };
+  return [
+    "// Gallery photos, in the order they appear on the page.",
+    "// Easiest way to change this: open the site with #edit at the end of the address,",
+    "// e.g. index.html#edit — drag, shuffle or remove photos, then press Save.",
+    '// Captions are optional: { "file": "photo-01.jpg", "title": "Family session", "place": "Spring 2025" }',
+    "window.PHOTOS = [",
+    order.map(p => "  " + JSON.stringify(keep(p))).join(",\n"),
+    "];",
+    "",
+  ].join("\n");
+}
+async function save() {
+  const text = photosFileText();
+  if (window.showSaveFilePicker) {
+    try {
+      if (!fileHandle) {
+        say("Choose photos.js in your site folder and replace it.", true);
+        fileHandle = await window.showSaveFilePicker({
+          suggestedName: "photos.js",
+          types: [{ description: "Photo list", accept: { "text/javascript": [".js"] } }],
+        });
+      }
+      const w = await fileHandle.createWritable();
+      await w.write(text); await w.close();
+      dirty = false; renderEditUI();
+      say("Saved. Reload the page without #edit to see it as visitors will.");
+      return;
+    } catch (err) {
+      if (err && err.name === "AbortError") { say("Not saved."); return; }
+      fileHandle = null; // fall through to download
+    }
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "text/javascript" }));
+  a.download = "photos.js";
+  document.body.appendChild(a); a.click(); a.remove();
+  dirty = false; renderEditUI();
+  say("Downloaded photos.js — move it into your site folder, replacing the old one.", true);
+}
+
+function renderEditUI() {
+  countEl.textContent = `${order.length} photo${order.length === 1 ? "" : "s"}`;
+  undoBtn.disabled = !undoStack.length;
+  saveBtn.disabled = !dirty;
+  saveBtn.textContent = dirty ? "Save" : "Saved";
+  tray.hidden = !removed.length;
+  tray.querySelector("h2").textContent = `Removed (${removed.length})`;
+  trayList.innerHTML = removed.map((r, i) =>
+    `<button type="button" data-restore="${i}" title="Put back"><img src="${esc(expand(r).src)}" alt=""><span>+ Put back</span></button>`).join("");
+}
+
+function setupEditMode() {
+  document.body.classList.add("editing");
+  document.title = "Editing — " + document.title;
+
+  bar = document.createElement("div");
+  bar.className = "editbar";
+  bar.innerHTML = `
+    <strong>Editing</strong><span class="count"></span>
+    <button type="button" data-bar="shuffle">Shuffle</button>
+    <button type="button" data-bar="undo">Undo</button>
+    <button type="button" data-bar="save" class="primary">Save</button>
+    <a href="./" data-bar="done">Done</a>`;
+  document.body.appendChild(bar);
+  countEl = bar.querySelector(".count");
+  undoBtn = bar.querySelector('[data-bar="undo"]');
+  saveBtn = bar.querySelector('[data-bar="save"]');
+  bar.querySelector('[data-bar="shuffle"]').onclick = shuffle;
+  undoBtn.onclick = undo;
+  saveBtn.onclick = save;
+
+  statusEl = document.createElement("div");
+  statusEl.className = "edit-status"; statusEl.setAttribute("role", "status");
+  document.body.appendChild(statusEl);
+
+  const help = document.createElement("p");
+  help.className = "edit-help";
+  help.textContent = "Drag photos to rearrange them, or use the arrows. ✕ takes a photo out — you can put it back from the Removed list below. Nothing changes for visitors until you press Save.";
+  document.querySelector(".intro").appendChild(help);
+
+  tray = document.createElement("section");
+  tray.className = "tray"; tray.hidden = true;
+  tray.innerHTML = `<h2></h2><p>Click a photo to put it back. Removed photos stay in your images folder; they just aren't shown.</p><div class="tray-list"></div>`;
+  gallery.after(tray);
+  trayList = tray.querySelector(".tray-list");
+  trayList.addEventListener("click", e => { const b = e.target.closest("[data-restore]"); if (b) restore(+b.dataset.restore); });
+
+  /* Drag and drop */
+  let dragFrom = null;
+  const clearMarks = () => gallery.querySelectorAll(".dragging, .drop-target").forEach(x => x.classList.remove("dragging", "drop-target"));
+  gallery.addEventListener("dragstart", e => {
+    const s = e.target.closest(".shot"); if (!s) return;
+    dragFrom = +s.dataset.index; s.classList.add("dragging");
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(dragFrom));
+  });
+  gallery.addEventListener("dragover", e => {
+    if (dragFrom === null) return;
+    const s = e.target.closest(".shot"); if (!s) return;
+    e.preventDefault();
+    if (!s.classList.contains("drop-target")) {
+      gallery.querySelectorAll(".drop-target").forEach(x => x.classList.remove("drop-target"));
+      if (+s.dataset.index !== dragFrom) s.classList.add("drop-target");
+    }
+  });
+  gallery.addEventListener("drop", e => {
+    const s = e.target.closest(".shot");
+    if (!s || dragFrom === null) return;
+    e.preventDefault();
+    const to = +s.dataset.index, from = dragFrom;
+    dragFrom = null; clearMarks();
+    if (to === from) return;
+    snapshot();
+    const [m] = order.splice(from, 1);
+    order.splice(to, 0, m);
+    changed();
+  });
+  gallery.addEventListener("dragend", () => { dragFrom = null; clearMarks(); });
+
+  window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+}
+
+window.addEventListener("hashchange", () => location.reload());
+
+if (editing) setupEditMode();
+render();
+
+/* Header border + reveal on scroll */
+const header = document.getElementById("top-bar");
+const onScroll = () => header.classList.toggle("scrolled", window.scrollY > 10);
+window.addEventListener("scroll", onScroll, { passive: true }); onScroll();
+const reveals = document.querySelectorAll(".reveal");
+if (editing || !("IntersectionObserver" in window)) {
+  reveals.forEach(el => el.classList.add("in"));
+} else {
+  // Anything already on screen shows immediately; the rest fades in on scroll.
+  reveals.forEach(el => { if (el.getBoundingClientRect().top < window.innerHeight) el.classList.add("in"); });
+  const io = new IntersectionObserver(entries => entries.forEach(en => {
+    if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); }
+  }), { threshold: 0.1 });
+  reveals.forEach(el => { if (!el.classList.contains("in")) io.observe(el); });
+}
+
+/* Theme toggle */
+const root = document.documentElement;
+try { const t = localStorage.getItem("theme"); if (t) root.dataset.theme = t; } catch (_) {}
+document.getElementById("theme-toggle").addEventListener("click", () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("theme", root.dataset.theme); } catch (_) {}
+});
+
+document.getElementById("year").textContent = new Date().getFullYear();
+</script>
+</body>
+</html>
