@@ -138,6 +138,8 @@
   .upload-panel ol { margin: 12px 0 10px 20px; display: grid; gap: 6px; }
   .upload-panel .small { font-size: .82rem; }
   .upload-panel .go { display: inline-block; margin-top: 16px; padding: 11px 22px; border-radius: 999px; background: var(--accent); color: #fff; font-size: .85rem; letter-spacing: .04em; }
+  .edit-status { white-space: pre-line; }
+  body.dropping::after { content: "Drop photos to add them"; position: fixed; inset: 12px; z-index: 80; display: grid; place-items: center; border: 3px dashed var(--accent); border-radius: 16px; background: color-mix(in srgb, var(--bg) 85%, transparent); color: var(--text); font-family: var(--serif); font-size: 2rem; pointer-events: none; }
   .upload-panel a:not(.go) { color: var(--accent); text-decoration: underline; }
   .upload-panel input { margin-top: 6px; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-family: ui-monospace, Menlo, monospace; font-size: .85rem; }
   .upload-panel input:focus { border-color: var(--accent); }
@@ -196,10 +198,11 @@
 <script>
 const ALT = "Outdoor photograph by Ricky Bleich";
 const label = p => [p.title, p.place].filter(Boolean).join(" \u2014 ");
+const previews = {};   // newly added photos: shown from this computer until the website has them
 const expand = raw => ({
   title: "", place: "", ...raw,
-  src:  raw.src  || `images/thumbs/${raw.file}`,
-  full: raw.full || `images/full/${raw.file}`,
+  src:  raw.src  || previews[raw.file] || `images/thumbs/${raw.file}`,
+  full: raw.full || previews[raw.file] || `images/full/${raw.file}`,
 });
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
@@ -295,7 +298,7 @@ lb.addEventListener("touchend", e => {
 
 /* ===================== Edit mode (index.html#edit) ===================== */
 let bar, countEl, stateEl, undoBtn, saveBtn, discardBtn, statusEl, connectPanel, tray, trayList;
-let publishing = false;
+let publishing = false, adding = false, pendingFiles = null, addBtn, fileInput;
 
 /* Publishing: Save writes photos.js straight into the GitHub repository that hosts the site. */
 const GH = { owner: "rsilber12", repo: "rsilber12.github.io", branch: "main", path: "photos.js" };
@@ -359,7 +362,8 @@ async function connect() {
   } catch (_) { err.textContent = "Couldn't reach GitHub. Check your internet connection and try again."; return; }
   setToken(token); input.value = ""; hideConnect(); renderEditUI();
   say("Connected to GitHub \u2713");
-  if (dirty) save();
+  if (pendingFiles) { const f = pendingFiles; pendingFiles = null; addPhotos(f); }
+  else if (dirty) save();
 }
 function disconnect() {
   if (!confirm("Disconnect this browser from GitHub? You'll need to paste a key again to publish.")) return;
@@ -465,12 +469,101 @@ async function save() {
   }
 }
 
+/* Adding photos: each one is resized in the browser (which also removes hidden data such as
+   GPS location), uploaded to GitHub in two sizes, and put at the start of the gallery. */
+const SIZES = [1400, 2560];   // grid copy, large viewer copy (longest side, in pixels)
+function blobToBase64(blob) {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(blob); });
+}
+async function decodeImage(file) {
+  if (window.createImageBitmap) { try { return await createImageBitmap(file, { imageOrientation: "from-image" }); } catch (_) {} }
+  return await new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => res(img); img.onerror = () => rej(new Error("decode"));
+    img.src = URL.createObjectURL(file);
+  });
+}
+function resizeTo(img, maxPx) {
+  const w = img.width, h = img.height, s = Math.min(1, maxPx / Math.max(w, h));
+  const c = document.createElement("canvas");
+  c.width = Math.round(w * s); c.height = Math.round(h * s);
+  const ctx = c.getContext("2d"); ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  return new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error("encode")), "image/jpeg", 0.82));
+}
+function nextPhotoNumber() {
+  let max = 0;
+  for (const p of [...order, ...removed]) { const m = /photo-(\d+)\.jpg$/.exec(p.file || ""); if (m) max = Math.max(max, +m[1]); }
+  return max + 1;
+}
+async function addPhotos(fileList) {
+  const files = [...fileList].filter(f => /^image\//.test(f.type) || /\.(heic|heif|jpe?g|png|webp)$/i.test(f.name));
+  if (!files.length || adding || publishing) return;
+  const token = getToken();
+  if (!token) { pendingFiles = files; showConnect("Connect to GitHub first \u2014 then your photos will be added."); return; }
+  adding = true; renderEditUI();
+  const problems = []; let added = 0, n = nextPhotoNumber(), stop = false;
+  snapshot();
+  for (let i = 0; i < files.length && !stop; i++) {
+    const f = files[i];
+    say(`Adding photo ${i + 1} of ${files.length}\u2026`, true);
+    let img;
+    try { img = await decodeImage(f); }
+    catch (_) {
+      problems.push(/\.(heic|heif)$/i.test(f.name)
+        ? `${f.name}: this browser can't open iPhone (HEIC) photos. Use Safari, or export the photo as JPEG.`
+        : `${f.name}: couldn't open this photo.`);
+      continue;
+    }
+    try {
+      const [small, large] = [await resizeTo(img, SIZES[0]), await resizeTo(img, SIZES[1])];
+      let name;
+      for (let tries = 0; ; tries++) {
+        if (tries > 30) throw new Error("names");
+        name = `photo-${String(n).padStart(2, "0")}.jpg`; n++;
+        const r = await gh("PUT", `/contents/images/thumbs/${name}`, token, { message: `Add photo ${name}`, content: await blobToBase64(small), branch: GH.branch });
+        if (r.ok) break;
+        if (r.status === 422) continue;   // that name is already used on the site; try the next number
+        if (r.status === 401) throw Object.assign(new Error(), { code: 401 });
+        if (r.status === 403 || r.status === 404) throw Object.assign(new Error(), { code: 403 });
+        throw new Error("upload");
+      }
+      const r2 = await gh("PUT", `/contents/images/full/${name}`, token, { message: `Add photo ${name} (large)`, content: await blobToBase64(large), branch: GH.branch });
+      if (!r2.ok) throw new Error("upload");
+      previews[name] = URL.createObjectURL(small);
+      order.unshift({ file: name });
+      added++;
+      render();
+    } catch (err) {
+      if (err.code === 401 || err.code === 403) {
+        setToken(""); stop = true; pendingFiles = files.slice(i);
+        showConnect(err.code === 401
+          ? "Your GitHub key stopped working (keys expire). Make a new one and paste it here \u2014 then your photos will be added."
+          : "That key can't change the website's files. Make a new one (check steps 3 and 4) and paste it here.");
+      } else problems.push(`${f.name}: upload failed \u2014 check your internet connection and try again.`);
+    } finally { if (img && img.close) img.close(); }
+  }
+  adding = false;
+  if (added) {
+    dirty = true; saveDraft(false); render();
+    await save();   // publish the new order so the photos appear on the website
+    if (!dirty) say(`Added ${added} photo${added > 1 ? "s" : ""} at the start of the gallery and published \u2713` +
+      ` Drag ${added > 1 ? "them" : "it"} anywhere you like, then Save & publish.` +
+      (problems.length ? `\n\nNot added:\n${problems.join("\n")}` : ""), true);
+  } else {
+    undoStack.pop(); renderEditUI();
+    if (problems.length) say(`No photos were added.\n${problems.join("\n")}`, true);
+  }
+}
+
 function renderEditUI() {
   countEl.textContent = `${order.length} photo${order.length === 1 ? "" : "s"}`;
   stateEl.textContent = publishing ? "Publishing\u2026" : dirty ? "Not published" : "Online";
   stateEl.dataset.state = publishing ? "pending" : dirty ? "unsaved" : "live";
   undoBtn.disabled = !undoStack.length || publishing;
-  saveBtn.disabled = !dirty || publishing;
+  saveBtn.disabled = !dirty || publishing || adding;
+  addBtn.disabled = publishing || adding;
+  addBtn.textContent = adding ? "Adding\u2026" : "Add photos";
   saveBtn.textContent = publishing ? "Publishing\u2026" : dirty ? "Save & publish" : "Published";
   discardBtn.hidden = !dirty;
   const conn = document.querySelector(".gh-conn");
@@ -492,6 +585,7 @@ function setupEditMode() {
     <button type="button" data-bar="shuffle">Shuffle</button>
     <button type="button" data-bar="undo">Undo</button>
     <button type="button" data-bar="discard">Discard</button>
+    <button type="button" data-bar="add">Add photos</button>
     <button type="button" data-bar="save" class="primary">Save &amp; publish</button>
     <a href="./" data-bar="done">Done</a>`;
   document.body.appendChild(bar);
@@ -504,6 +598,22 @@ function setupEditMode() {
   undoBtn.onclick = undo;
   saveBtn.onclick = save;
   discardBtn.onclick = discard;
+  addBtn = bar.querySelector('[data-bar="add"]');
+  fileInput = document.createElement("input");
+  fileInput.type = "file"; fileInput.accept = "image/*,.heic,.heif"; fileInput.multiple = true; fileInput.hidden = true;
+  document.body.appendChild(fileInput);
+  addBtn.onclick = () => fileInput.click();
+  fileInput.onchange = () => { const f = [...fileInput.files]; fileInput.value = ""; addPhotos(f); };
+  /* Photos dragged in from the computer */
+  const hasFiles = e => e.dataTransfer && [...e.dataTransfer.types].includes("Files");
+  document.addEventListener("dragover", e => { if (hasFiles(e)) { e.preventDefault(); document.body.classList.add("dropping"); } });
+  document.addEventListener("dragleave", e => { if (!e.relatedTarget) document.body.classList.remove("dropping"); });
+  document.addEventListener("drop", e => {
+    document.body.classList.remove("dropping");
+    if (!hasFiles(e)) return;
+    e.preventDefault(); e.stopPropagation();
+    addPhotos(e.dataTransfer.files);
+  }, true);
   bar.querySelector('[data-bar="done"]').addEventListener("click", e => {
     if (!dirty) return; // published (or nothing changed) \u2014 just leave
     e.preventDefault();
@@ -538,7 +648,7 @@ function setupEditMode() {
 
   const help = document.createElement("p");
   help.className = "edit-help";
-  help.innerHTML = `Drag photos to rearrange them, or use the arrows. \u2715 takes a photo out \u2014 you can put it back from the Removed list below. When you're happy, press <b>Save &amp; publish</b> and your website updates about a minute later. Your changes are kept in this browser until then.
+  help.innerHTML = `Drag photos to rearrange them, or use the arrows. \u2715 takes a photo out \u2014 you can put it back from the Removed list below. To add new photos, click <b>Add photos</b> or drag them onto this page. When you're happy, press <b>Save &amp; publish</b> and your website updates about a minute later. Your changes are kept in this browser until then.
     <span class="gh-conn" hidden> \u00B7 Connected to GitHub (<button type="button" class="linkish">disconnect</button>)</span>`;
   help.querySelector(".linkish").onclick = disconnect;
   document.querySelector(".intro").appendChild(help);
