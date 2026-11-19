@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ricky Bleich — Outdoor Photography</title>
+<title>Ricky Bleich ‚Äî Outdoor Photography</title>
 <meta name="description" content="Outdoor portrait and family photography by Ricky Bleich.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -125,6 +125,27 @@
     .edit-tools button[data-act="left"] { margin-left: auto; }
     .editbar strong { display: none; }
   }
+  .editbar .state { font-weight: 500; margin-right: 2px; }
+  .editbar .state::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; background: #3f9b5a; }
+  .editbar .state[data-state="unsaved"]::before { background: #d9822b; }
+  .editbar .state[data-state="pending"]::before { background: #d9b52b; }
+  .editbar [hidden] { display: none; }
+  .upload-panel { position: fixed; z-index: 70; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, calc(100vw - 32px)); padding: 28px 26px 24px; border-radius: 14px; background: var(--bg); color: var(--text); border: 1px solid var(--line); box-shadow: 0 24px 70px rgba(0,0,0,.45); }
+  .upload-panel[hidden] { display: none; }
+  .upload-panel h3 { font-family: var(--serif); font-weight: 500; font-size: 1.6rem; margin-bottom: 8px; }
+  .upload-panel p, .upload-panel li { font-size: .92rem; color: var(--muted); }
+  .upload-panel b { color: var(--text); font-weight: 500; }
+  .upload-panel ol { margin: 12px 0 10px 20px; display: grid; gap: 6px; }
+  .upload-panel .small { font-size: .82rem; }
+  .upload-panel .go { display: inline-block; margin-top: 16px; padding: 11px 22px; border-radius: 999px; background: var(--accent); color: #fff; font-size: .85rem; letter-spacing: .04em; }
+  .upload-panel a:not(.go) { color: var(--accent); text-decoration: underline; }
+  .upload-panel input { margin-top: 6px; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-family: ui-monospace, Menlo, monospace; font-size: .85rem; }
+  .upload-panel input:focus { border-color: var(--accent); }
+  .upload-panel .err { min-height: 1.2em; margin-top: 8px; font-size: .85rem; color: var(--accent); }
+  .upload-panel button.go { margin-top: 8px; border: 0; cursor: pointer; }
+  .edit-help .linkish { color: var(--accent); text-decoration: underline; font-size: inherit; }
+  .upload-panel .close { position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%; color: var(--muted); }
+  .upload-panel .close:hover { color: var(--text); background: var(--line); }
   .tray { padding: 0 var(--gutter) 140px; }
   .tray h2 { font-family: var(--serif); font-weight: 400; font-size: 1.8rem; }
   .tray p { color: var(--muted); font-size: .9rem; margin: 4px 0 16px; }
@@ -148,30 +169,33 @@
   <section class="intro reveal">
     <span class="kicker">Portfolio</span>
     <h1>Outdoor Photography</h1>
-    <p>Quiet, honest pictures of people — made in natural light, without hurry.</p>
+    <p>Quiet, honest pictures of people ‚Äî made in natural light, without hurry.</p>
   </section>
 
   <div class="gallery" id="gallery"></div>
 </main>
 
 <footer>
-  <span>© <span id="year"></span> Ricky Bleich · <a href="mailto:office@umnot.com">office@umnot.com</a></span>
+  <span>¬© <span id="year"></span> Ricky Bleich ¬∑ <a href="mailto:office@umnot.com">office@umnot.com</a></span>
   <button class="theme-toggle" id="theme-toggle">Toggle theme</button>
 </footer>
 
 <div class="lightbox" id="lightbox" aria-hidden="true" role="dialog" aria-label="Image viewer">
   <span class="lb-count" id="lb-count"></span>
-  <button class="lb-btn lb-close" id="lb-close">Close ✕</button>
-  <button class="lb-btn lb-prev" id="lb-prev" aria-label="Previous">‹</button>
+  <button class="lb-btn lb-close" id="lb-close">Close ‚úï</button>
+  <button class="lb-btn lb-prev" id="lb-prev" aria-label="Previous">‚Äπ</button>
   <figure><img id="lb-img" alt=""><figcaption id="lb-cap"></figcaption></figure>
-  <button class="lb-btn lb-next" id="lb-next" aria-label="Next">›</button>
+  <button class="lb-btn lb-next" id="lb-next" aria-label="Next">‚Ä∫</button>
 </div>
 
 <!-- The photo list lives in photos.js. Open this page with #edit at the end of the address to rearrange it. -->
-<script src="photos.js"></script>
+<script>
+  // Load the photo list fresh each visit, so a newly uploaded photos.js shows up right away.
+  document.write('<script src="photos.js?v=' + Date.now() + '"><\/script>');
+</script>
 <script>
 const ALT = "Outdoor photograph by Ricky Bleich";
-const label = p => [p.title, p.place].filter(Boolean).join(" — ");
+const label = p => [p.title, p.place].filter(Boolean).join(" ‚Äî ");
 const expand = raw => ({
   title: "", place: "", ...raw,
   src:  raw.src  || `images/thumbs/${raw.file}`,
@@ -196,9 +220,9 @@ function render() {
     ${!editing && label(p) ? `<figcaption>${p.place ? `<span>${esc(p.place)}</span>` : ""}${esc(p.title)}</figcaption>` : ""}
     ${editing ? `<div class="edit-tools">
         <span class="pos">${i + 1}</span>
-        <button type="button" data-act="left" aria-label="Move earlier" title="Move earlier">←</button>
-        <button type="button" data-act="right" aria-label="Move later" title="Move later">→</button>
-        <button type="button" data-act="remove" class="rm" aria-label="Remove from gallery" title="Remove">✕</button>
+        <button type="button" data-act="left" aria-label="Move earlier" title="Move earlier">‚Üê</button>
+        <button type="button" data-act="right" aria-label="Move later" title="Move later">‚Üí</button>
+        <button type="button" data-act="remove" class="rm" aria-label="Remove from gallery" title="Remove">‚úï</button>
       </div>` : ""}
   </figure>`).join("");
 
@@ -270,10 +294,77 @@ lb.addEventListener("touchend", e => {
 });
 
 /* ===================== Edit mode (index.html#edit) ===================== */
-let bar, countEl, undoBtn, saveBtn, statusEl, tray, trayList, fileHandle = null;
+let bar, countEl, stateEl, undoBtn, saveBtn, discardBtn, statusEl, connectPanel, tray, trayList;
+let publishing = false;
+
+/* Publishing: Save writes photos.js straight into the GitHub repository that hosts the site. */
+const GH = { owner: "rsilber12", repo: "rsilber12.github.io", branch: "main", path: "photos.js" };
+const TOKEN_KEY = "gallery-github-token";   // kept only in this browser
+const getToken = () => { try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (_) { return ""; } };
+const setToken = t => { try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch (_) {} };
+async function gh(method, url, token, body) {
+  const res = await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}${url}`, {
+    method, cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      ...(body ? { "Content-Type": "application/json" } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  let data = null; try { data = await res.json(); } catch (_) {}
+  return { ok: res.ok, status: res.status, data };
+}
+function toBase64(s) {
+  const bytes = new TextEncoder().encode(s); let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+/* Drafts: every change is kept in this browser, so leaving edit mode never loses work. */
+const DRAFT_KEY = "gallery-edit-draft";
+let liveOrder = JSON.stringify(window.PHOTOS || []);
+let liveHidden = JSON.stringify(window.HIDDEN || []);
+const differsFromLive = () => JSON.stringify(order) !== liveOrder || JSON.stringify(removed) !== liveHidden;
+function saveDraft(saved) {
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ order, removed, saved: !!saved })); } catch (_) {}
+}
+function loadDraft() { try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); } catch (_) { return null; } }
+function clearDraft() { try { localStorage.removeItem(DRAFT_KEY); } catch (_) {} }
 
 function snapshot() { undoStack.push({ order: order.slice(), removed: removed.slice() }); if (undoStack.length > 100) undoStack.shift(); }
-function changed() { dirty = true; render(); }
+function changed() { dirty = true; saveDraft(false); render(); }
+function discard() {
+  if (!confirm("Throw away your changes and go back to the order that's online now?")) return;
+  order = (window.PHOTOS || []).slice(); removed = (window.HIDDEN || []).slice();
+  undoStack.length = 0; dirty = false; clearDraft();
+  render(); say("Changes discarded.");
+}
+function showConnect(msg) {
+  connectPanel.hidden = false;
+  connectPanel.querySelector(".err").textContent = msg || "";
+  connectPanel.querySelector("input").focus();
+}
+function hideConnect() { connectPanel.hidden = true; }
+async function connect() {
+  const input = connectPanel.querySelector("input"), err = connectPanel.querySelector(".err");
+  const token = input.value.trim();
+  if (!token) { err.textContent = "Paste the key from GitHub first."; return; }
+  err.textContent = "Checking‚Ä¶";
+  try {
+    const r = await gh("GET", "", token);
+    if (r.status === 401) { err.textContent = "GitHub didn't recognise that key. Copy it again and paste the whole thing."; return; }
+    if (!r.ok) { err.textContent = "This key can't see the website's repository. Check step 3 and make a new key."; return; }
+  } catch (_) { err.textContent = "Couldn't reach GitHub. Check your internet connection and try again."; return; }
+  setToken(token); input.value = ""; hideConnect(); renderEditUI();
+  say("Connected to GitHub ‚úì");
+  if (dirty) save();
+}
+function disconnect() {
+  if (!confirm("Disconnect this browser from GitHub? You'll need to paste a key again to publish.")) return;
+  setToken(""); renderEditUI(); say("Disconnected.");
+}
 function act(a, i) {
   snapshot();
   if (a === "remove") {
@@ -321,48 +412,69 @@ function photosFileText() {
   return [
     "// Gallery photos, in the order they appear on the page.",
     "// Easiest way to change this: open the site with #edit at the end of the address,",
-    "// e.g. index.html#edit — drag, shuffle or remove photos, then press Save.",
+    "// e.g. index.html#edit ‚Äî drag, shuffle or remove photos, then press Save.",
     '// Captions are optional: { "file": "photo-01.jpg", "title": "Family session", "place": "Spring 2025" }',
     "window.PHOTOS = [",
     order.map(p => "  " + JSON.stringify(keep(p))).join(",\n"),
     "];",
     "",
+    "// Photos taken out of the gallery. They can be put back from edit mode.",
+    "window.HIDDEN = [",
+    removed.map(p => "  " + JSON.stringify(keep(p))).join(",\n"),
+    "];",
+    "",
   ].join("\n");
 }
+/* Save = publish photos.js to GitHub. The website updates about a minute later. */
 async function save() {
-  const text = photosFileText();
-  if (window.showSaveFilePicker) {
-    try {
-      if (!fileHandle) {
-        say("Choose photos.js in your site folder and replace it.", true);
-        fileHandle = await window.showSaveFilePicker({
-          suggestedName: "photos.js",
-          types: [{ description: "Photo list", accept: { "text/javascript": [".js"] } }],
-        });
+  if (publishing) return;
+  const token = getToken();
+  if (!token) { showConnect(); return; }
+  publishing = true; renderEditUI(); say("Publishing‚Ä¶", true);
+  const fail = (code, msg) => Object.assign(new Error(msg || "failed"), { code });
+  try {
+    const text = photosFileText();
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const cur = await gh("GET", `/contents/${GH.path}?ref=${GH.branch}`, token);
+      if (cur.status === 401) throw fail(401);
+      if (!cur.ok && cur.status !== 404) throw fail(cur.status);
+      const put = await gh("PUT", `/contents/${GH.path}`, token, {
+        message: "Update gallery from edit mode",
+        content: toBase64(text),
+        branch: GH.branch,
+        ...(cur.ok && cur.data && cur.data.sha ? { sha: cur.data.sha } : {}),
+      });
+      if (put.ok) {
+        liveOrder = JSON.stringify(order); liveHidden = JSON.stringify(removed);
+        dirty = false; clearDraft();
+        say("Published ‚úì ‚Äî your website shows it in about a minute.");
+        return;
       }
-      const w = await fileHandle.createWritable();
-      await w.write(text); await w.close();
-      dirty = false; renderEditUI();
-      say("Saved. Reload the page without #edit to see it as visitors will.");
-      return;
-    } catch (err) {
-      if (err && err.name === "AbortError") { say("Not saved."); return; }
-      fileHandle = null; // fall through to download
+      if (put.status === 401) throw fail(401);
+      if (put.status === 403 || put.status === 404) throw fail(403);
+      if (put.status !== 409 && put.status !== 422) throw fail(put.status);
+      // 409/422: the file changed meanwhile ‚Äî fetch the latest version and try again
     }
+    throw fail(409);
+  } catch (err) {
+    if (err.code === 401) { setToken(""); say("GitHub didn't accept your key ‚Äî it may have expired.", true); showConnect("Your GitHub key stopped working (keys expire). Make a new one and paste it here."); }
+    else if (err.code === 403) { setToken(""); say("Your key isn't allowed to change the website.", true); showConnect("That key can't change the website's files. Make a new one ‚Äî check steps 3 and 4 ‚Äî and paste it here."); }
+    else say("Couldn't publish ‚Äî check your internet connection and press Save again. Your changes are kept.", true);
+  } finally {
+    publishing = false; renderEditUI();
   }
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([text], { type: "text/javascript" }));
-  a.download = "photos.js";
-  document.body.appendChild(a); a.click(); a.remove();
-  dirty = false; renderEditUI();
-  say("Downloaded photos.js — move it into your site folder, replacing the old one.", true);
 }
 
 function renderEditUI() {
   countEl.textContent = `${order.length} photo${order.length === 1 ? "" : "s"}`;
-  undoBtn.disabled = !undoStack.length;
-  saveBtn.disabled = !dirty;
-  saveBtn.textContent = dirty ? "Save" : "Saved";
+  stateEl.textContent = publishing ? "Publishing‚Ä¶" : dirty ? "Not published" : "Online";
+  stateEl.dataset.state = publishing ? "pending" : dirty ? "unsaved" : "live";
+  undoBtn.disabled = !undoStack.length || publishing;
+  saveBtn.disabled = !dirty || publishing;
+  saveBtn.textContent = publishing ? "Publishing‚Ä¶" : dirty ? "Save & publish" : "Published";
+  discardBtn.hidden = !dirty;
+  const conn = document.querySelector(".gh-conn");
+  if (conn) conn.hidden = !getToken();
   tray.hidden = !removed.length;
   tray.querySelector("h2").textContent = `Removed (${removed.length})`;
   trayList.innerHTML = removed.map((r, i) =>
@@ -371,32 +483,78 @@ function renderEditUI() {
 
 function setupEditMode() {
   document.body.classList.add("editing");
-  document.title = "Editing — " + document.title;
+  document.title = "Editing ‚Äî " + document.title;
 
   bar = document.createElement("div");
   bar.className = "editbar";
   bar.innerHTML = `
-    <strong>Editing</strong><span class="count"></span>
+    <span class="state"></span><span class="count"></span>
     <button type="button" data-bar="shuffle">Shuffle</button>
     <button type="button" data-bar="undo">Undo</button>
-    <button type="button" data-bar="save" class="primary">Save</button>
+    <button type="button" data-bar="discard">Discard</button>
+    <button type="button" data-bar="save" class="primary">Save &amp; publish</button>
     <a href="./" data-bar="done">Done</a>`;
   document.body.appendChild(bar);
   countEl = bar.querySelector(".count");
+  stateEl = bar.querySelector(".state");
   undoBtn = bar.querySelector('[data-bar="undo"]');
   saveBtn = bar.querySelector('[data-bar="save"]');
+  discardBtn = bar.querySelector('[data-bar="discard"]');
   bar.querySelector('[data-bar="shuffle"]').onclick = shuffle;
   undoBtn.onclick = undo;
   saveBtn.onclick = save;
+  discardBtn.onclick = discard;
+  bar.querySelector('[data-bar="done"]').addEventListener("click", e => {
+    if (!dirty) return; // published (or nothing changed) ‚Äî just leave
+    e.preventDefault();
+    if (confirm("Your changes aren't on the website yet.\n\nOK ‚Äî publish them now\nCancel ‚Äî keep editing\n\n(Your changes are kept in this browser either way.)")) save();
+  });
 
   statusEl = document.createElement("div");
   statusEl.className = "edit-status"; statusEl.setAttribute("role", "status");
   document.body.appendChild(statusEl);
 
+  connectPanel = document.createElement("div");
+  connectPanel.className = "upload-panel"; connectPanel.hidden = true;
+  connectPanel.setAttribute("role", "dialog"); connectPanel.setAttribute("aria-label", "Connect to GitHub");
+  connectPanel.innerHTML = `
+    <button type="button" class="close" aria-label="Close">‚úï</button>
+    <h3>Connect to GitHub ‚Äî one time</h3>
+    <p>So Save can publish straight to your website, this page needs a GitHub key. It's kept only in this browser.</p>
+    <ol>
+      <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Open GitHub's ‚Äúnew key‚Äù page</a>.</li>
+      <li><b>Token name:</b> Gallery editor. <b>Expiration:</b> the longest offered (e.g. 1 year).</li>
+      <li><b>Repository access:</b> Only select repositories ‚Üí <b>${GH.repo}</b>.</li>
+      <li><b>Permissions</b> ‚Üí Repository permissions ‚Üí <b>Contents</b> ‚Üí <b>Read and write</b>.</li>
+      <li>Click <b>Generate token</b>, copy it, and paste it here:</li>
+    </ol>
+    <input type="password" placeholder="github_pat_‚Ä¶" autocomplete="off" spellcheck="false" aria-label="GitHub key">
+    <p class="err" role="alert"></p>
+    <button type="button" class="go">Connect</button>`;
+  document.body.appendChild(connectPanel);
+  connectPanel.querySelector(".close").onclick = hideConnect;
+  connectPanel.querySelector(".go").onclick = connect;
+  connectPanel.querySelector("input").addEventListener("keydown", e => { if (e.key === "Enter") connect(); });
+
   const help = document.createElement("p");
   help.className = "edit-help";
-  help.textContent = "Drag photos to rearrange them, or use the arrows. ✕ takes a photo out — you can put it back from the Removed list below. Nothing changes for visitors until you press Save.";
+  help.innerHTML = `Drag photos to rearrange them, or use the arrows. ‚úï takes a photo out ‚Äî you can put it back from the Removed list below. When you're happy, press <b>Save &amp; publish</b> and your website updates about a minute later. Your changes are kept in this browser until then.
+    <span class="gh-conn" hidden> ¬∑ Connected to GitHub (<button type="button" class="linkish">disconnect</button>)</span>`;
+  help.querySelector(".linkish").onclick = disconnect;
   document.querySelector(".intro").appendChild(help);
+
+  /* Pick up where you left off */
+  removed = (window.HIDDEN || []).slice();
+  const draft = loadDraft();
+  if (draft && Array.isArray(draft.order)) {
+    const same = JSON.stringify(draft.order) === liveOrder && JSON.stringify(draft.removed || []) === liveHidden;
+    if (same) clearDraft();            // already online
+    else {
+      order = draft.order; removed = draft.removed || [];
+      dirty = true;
+      setTimeout(() => say("Restored your unpublished changes ‚Äî press Save & publish when you're ready."), 300);
+    }
+  }
 
   tray = document.createElement("section");
   tray.className = "tray"; tray.hidden = true;
